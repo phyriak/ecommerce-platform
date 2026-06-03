@@ -1,0 +1,42 @@
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+
+  - job_name: payment-service
+
+    static_configs:
+      - targets:
+          - localhost
+
+        labels:
+          service: payment-service
+          __path__: /var/log/ecommerce/payment-service/*.log
+
+  
+  - job_name: notification-service
+
+    static_configs:
+      - targets:
+          - localhost
+
+        labels:
+          service: notification-service
+          __path__: /var/log/ecommerce/notification-service/*.log
+
+
+  - job_name: order-service
+
+    static_configs:
+      - targets:
+          - localhost
+
+        labels:
+          service: order-service
+          __path__: /var/log/ecommerce/order-service/*.log
