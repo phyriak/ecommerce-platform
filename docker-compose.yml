@@ -1,11 +1,8 @@
 services:
+
   postgres:
     image: postgres:16
-
     container_name: postgres-db
-
-    networks:
-     - ecommerce-network
 
     environment:
       POSTGRES_DB: ecommerce
@@ -16,85 +13,96 @@ services:
       - "5433:5432"
 
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./storage/postgres:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d
-
-    restart: unless-stopped
-  
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    container_name: kafka
-
-    ports:
-     - "9092:9092"
 
     networks:
       - ecommerce-network
 
+    restart: unless-stopped
+
+  zookeeper:
+    image: zookeeper
+    container_name: zookeeper
+
     environment:
-     KAFKA_BROKER_ID: 1
-     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      ZOO_MY_ID: 1
 
-     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+    ports:
+      - "2181:2181"
 
-     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - ecommerce-network
 
     restart: unless-stopped
 
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+
     depends_on:
-     - zookeeper
+      - zookeeper
 
-  zookeeper:
-   image: zookeeper
-   container_name: zookeeper
-   ports:
-     - "2181:2181"
+    ports:
+      - "9092:9092"
 
-   networks:
-    - ecommerce-network
+    environment:
+      KAFKA_BROKER_ID: 1
 
-   restart: unless-stopped
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+    networks:
+      - ecommerce-network
+
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus
     container_name: prometheus
 
-    networks:
-      - ecommerce-network
-
     ports:
       - "9090:9090"
 
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-storage:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./storage/prometheus:/prometheus
 
-    
+    networks:
+      - ecommerce-network
+
     restart: unless-stopped
-  
 
   grafana:
     image: grafana/grafana
     container_name: grafana
 
-    networks:
-      - ecommerce-network
-
     ports:
       - "3000:3000"
 
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
 
     volumes:
-      - grafana-storage:/var/lib/grafana
+      - ./storage/grafana:/var/lib/grafana
 
     depends_on:
       - prometheus
-      - tempo
       - loki
+      - tempo
+
+    networks:
+      - ecommerce-network
 
     restart: unless-stopped
 
@@ -102,18 +110,18 @@ services:
     image: grafana/tempo:latest
     container_name: tempo
 
-    networks:
-      - ecommerce-network
-
     command:
       - "-config.file=/etc/tempo.yml"
 
-    volumes:
-      - ./tempo.yml:/etc/tempo.yml
-      - tempo-storage:/var/tempo
-
     ports:
       - "3200:3200"
+
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo.yml
+      - ./storage/tempo:/var/tempo
+
+    networks:
+      - ecommerce-network
 
     restart: unless-stopped
 
@@ -121,29 +129,26 @@ services:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel-collector
 
-    networks:
-      - ecommerce-network
-
     command:
       - "--config=/etc/otel-collector-config.yml"
-
-    volumes:
-      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
 
     ports:
       - "4320:4318"
 
+    volumes:
+      - ./otel/otel-collector-config.yml:/etc/otel-collector-config.yml
+
     depends_on:
       - tempo
+
+    networks:
+      - ecommerce-network
 
     restart: unless-stopped
 
   loki:
     image: grafana/loki:latest
     container_name: loki
-
-    networks:
-      - ecommerce-network
 
     command:
       - "-config.file=/etc/loki/local-config.yaml"
@@ -152,8 +157,11 @@ services:
       - "3100:3100"
 
     volumes:
-      - ./loki-config.yml:/etc/loki/local-config.yaml
-      - loki-storage:/loki
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+      - ./storage/loki:/loki
+
+    networks:
+      - ecommerce-network
 
     restart: unless-stopped
 
@@ -161,27 +169,20 @@ services:
     image: grafana/promtail:latest
     container_name: promtail
 
-    networks:
-      - ecommerce-network
-
     command:
       - "-config.file=/etc/promtail/config.yml"
 
     volumes:
-      - ./promtail-config.yml:/etc/promtail/config.yml
-      - ./logs:/var/log/ecommerce
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+      - ./storage/logs:/var/log/ecommerce
 
     depends_on:
       - loki
 
-    restart: unless-stopped
+    networks:
+      - ecommerce-network
 
-volumes:
-  postgres-data:
-  grafana-storage:
-  prometheus-storage:
-  loki-storage:
-  tempo-storage:
+    restart: unless-stopped
 
 networks:
   ecommerce-network:
