@@ -9,7 +9,7 @@ scrape_configs:
 
     static_configs:
       - targets:
-          - payment.local:8088
+          - payment-service:8082
 
   - job_name: 'notification-service'
 
@@ -17,4 +17,4 @@ scrape_configs:
 
     static_configs:
       - targets:
-          - notification.local:8089
+          - notification-service:8089
