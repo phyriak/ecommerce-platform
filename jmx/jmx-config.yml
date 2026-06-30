@@ -1,0 +1,17 @@
+startDelaySeconds: 0
+
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  - pattern: 'Catalina<type=ThreadPool,name="http-nio-.*"><>currentThreadCount'
+    name: tomcat_threads_current
+    type: GAUGE
+
+  - pattern: 'Catalina<type=ThreadPool,name="http-nio-.*"><>currentThreadsBusy'
+    name: tomcat_threads_busy
+    type: GAUGE
+
+  - pattern: 'Catalina<type=ThreadPool,name="http-nio-.*"><>maxThreads'
+    name: tomcat_threads_max
+    type: GAUGE
