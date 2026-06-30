@@ -24,4 +24,4 @@ scrape_configs:
 
     static_configs:
       - targets:
-        - payment-service:9404
+          - payment-service:9404
