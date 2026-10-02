@@ -1,0 +1,58 @@
+groups:
+  - name: infrastructure
+    rules:
+
+      - alert: DiskUsageWarning
+        expr: |
+          100 * (
+            1 -
+            node_filesystem_avail_bytes{
+              mountpoint="/",
+              fstype!~"tmpfs|overlay"
+            }
+            /
+            node_filesystem_size_bytes{
+              mountpoint="/",
+              fstype!~"tmpfs|overlay"
+            }
+          ) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage above 80%"
+          description: "Root filesystem usage is {{ $value | printf \"%.1f\" }}%."
+
+      - alert: DiskUsageCritical
+        expr: |
+          100 * (
+            1 -
+            node_filesystem_avail_bytes{
+              mountpoint="/",
+              fstype!~"tmpfs|overlay"
+            }
+            /
+            node_filesystem_size_bytes{
+              mountpoint="/",
+              fstype!~"tmpfs|overlay"
+            }
+          ) > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk usage above 90%"
+          description: "Root filesystem usage is {{ $value | printf \"%.1f\" }}%."
+
+      - alert: DiskSpaceLow
+        expr: |
+          node_filesystem_avail_bytes{
+            mountpoint="/",
+            fstype!~"tmpfs|overlay"
+          } < 5 * 1024 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Less than 5 GB disk space remaining"
+          description: "Only {{ $value | humanize1024 }}B is available."

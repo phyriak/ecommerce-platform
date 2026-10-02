@@ -20,8 +20,19 @@ scrape_configs:
           - notification-service:8089
 
 
+
   - job_name: 'payment-service-jmx'
 
     static_configs:
       - targets:
           - payment-service:9404
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['noe-exporter:9100']
+
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+
